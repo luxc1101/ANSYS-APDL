@@ -1,0 +1,147 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Segementbuckel thermoeletrische Simulation durch Loop mit statistischer Analyse 
+!
+!
+!
+!/input,Segementbuckel_test,mac,E:\Lu\SHK\Code\Segmentbuckel_30\Test
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+finish
+/clear
+/units,si
+!WORKIND DIRECTORY
+/cwd,E:/Lu/SHK/Solution/
+FILECODE 			= 'Segementbuckel_test'
+PULS_PATH			= 'E:/Lu/SHK/Puls/'
+PULS_I				= '1_puls_5_6_conntronic_therm'
+PI              	= ACOS(-1)
+!Geometry Parameters
+PROJECTION_H1       = 0.0050
+PROJECTION_H2       = 0.0013
+PROJECTION_L1       = 0.0005
+PROJECTION_R1       = 0.020/2
+PROJECTION_R2       = 0.0140/2
+PROJECTION_R3       = 0.0034
+PROJECTION_PHI_1    = 30
+PROJECTION_PHI_2    = 30
+CUT_PHI_1			= 60
+CUT_PHI_2			= 30
+CYLIND_PHI_1	    = 20
+CYLIND_PHI_2		= 60
+SHEET_R             = PROJECTION_R1
+SHEET_H             = 0.0020
+arg_ecc             = 1e-4
+arg_tcc             = 1e-4
+PHYS_T_E            = 'T_E'
+T_E_FILE            = 'Thermo_Electric'
+! ---------------------------------
+! Change Working directories
+! ---------------------------------
+/inquire,act_path,directory
+/mkdir,%act_path(1,1)%/%FILECODE%
+/cwd,%act_path(1,1)%/%FILECODE%
+/filname,FILECODE,1
+! ---------------------------------------------------------------------
+! Load Input data
+! ---------------------------------------------------------------------
+/inquire,TLINES_I,lines,%PULS_PATH%%PULS_I%,csv
+*dim,TABLE_I,table,TLINES_I,1,1,time
+*tread,TABLE_I,%PULS_PATH%%PULS_I%,csv
+*dim,ARRAY_I,array,TLINES_I+1,2
+*mfun,ARRAY_I(1,1),copy,TABLE_I(0,0)
+TMAX_I = ARRAY_I(TLINES_I+1,1)
+TMIN_I = ARRAY_I(2,1)
+TINC_I = (TMAX_I-TMIN_I)/(TLINES_I-1)
+! ---------------------------------------------------------------------
+! Geometry
+! ---------------------------------------------------------------------
+! Keypoints
+! ----------------------------------
+/prep7
+!CYLIND LOWER BODY1
+cylind,PROJECTION_R1,,,-SHEET_H,-CYLIND_PHI_2,-CYLIND_PHI_1
+!CYLIND LOWER BODY2
+cylind,PROJECTION_R1,,,-SHEET_H,CYLIND_PHI_2,CYLIND_PHI_1
+!CYLIND LOWER BODY3
+cylind,PROJECTION_R3,,,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+
+*if,PROJECTION_PHI_1,eq,90,then 
+	!CYLIND LOWER BODY4
+	cylind,PROJECTION_R2-PROJECTION_L1/2,PROJECTION_R3,,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+*else
+	!CYLIND LOWER BODY4
+	cylind,PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),,,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+
+*if,PROJECTION_PHI_2,eq,90,then 
+	!CYLIND LOWER BODY5
+	cylind,PROJECTION_R2+PROJECTION_L1/2,PROJECTION_R2-PROJECTION_L1/2,,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+	!CYLIND LOWER BODY6
+	cylind,PROJECTION_R1,PROJECTION_R2+PROJECTION_L1/2,,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+*else
+	!CYLIND LOWER BODY5
+	cylind,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+	!CYLIND LOWER BODY6
+	cylind,PROJECTION_R1,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),,-SHEET_H,CYLIND_PHI_1,-CYLIND_PHI_1
+
+
+wpro,,90,
+wpro,,,-60
+CSYS,4
+k,200,PROJECTION_R3,PROJECTION_H1
+k,201,PROJECTION_R1,PROJECTION_H1
+k,202,PROJECTION_R1,PROJECTION_H2+PROJECTION_H1*0.30
+k,203,PROJECTION_R1,PROJECTION_H2+PROJECTION_H1*0.10
+k,204,PROJECTION_R1,PROJECTION_H2
+*if,PROJECTION_PHI_2,eq,90,then
+    k,205,PROJECTION_R2+PROJECTION_L1/2,PROJECTION_H2
+*else
+    k,205,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),PROJECTION_H2
+*endif
+k,206,PROJECTION_R2+PROJECTION_L1/2,0
+k,207,PROJECTION_R2-PROJECTION_L1/2,0
+*if,PROJECTION_PHI_1,eq,90,then
+    k,208,PROJECTION_R2-PROJECTION_L1/2,PROJECTION_H2
+*else
+    k,208,PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),PROJECTION_H2
+*endif
+k,209,PROJECTION_R3,PROJECTION_H2
+k,210,PROJECTION_R3,PROJECTION_H2+PROJECTION_H1*0.10
+k,211,PROJECTION_R3,PROJECTION_H2+PROJECTION_H1*0.30
+!AREAS
+numstr,area,200
+numstr,line,200
+numstr,volu,200
+a,205,206,207,208
+a,203,204,209,210
+a,202,203,210,211
+a,201,202,211,200
+! VOLU
+asel,s,,,200,203,1
+vrotat,all,,,,,,1,6,120,1
+! VOLU CUT1
+wpro,,,60
+wpro,,-90,
+wpoffs,,,PROJECTION_H2
+wpro,,90,
+wpro,,,-CUT_PHI_2
+wpro,,CUT_PHI_1,
+CSYS,4
+numstr,area,300
+numstr,volu,300
+rectng,0,projection_r1+0.001,0,-projection_h2/(sin(30*pi/180))
+CSYS,0
+vext,300,,,,-0.008,,1,1,1
+vsbv,200,300
+! VOLU CUT2
+wpro,,-CUT_PHI_1,
+wpro,,,2*CUT_PHI_2
+wpro,,-CUT_PHI_1,
+CSYS,4
+numstr,area,400
+numstr,volu,400
+rectng,0,projection_r1+0.001,0,-projection_h2/(sin(30*pi/180))
+CSYS,0
+vext,400,,,,0.008,,1,1,1
+vsbv,301,400
+wpcsys,-1,0
+allsel,all,all
+/eof

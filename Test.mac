@@ -1,0 +1,280 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!ringbuckel_30 thermoeletrische Simulation durch Loop mit statistischer Analyse 
+!
+!
+!
+!/input,Test,mac,E:\Lu\SHK\Code\Segmentbuckel_30\Test
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+finish
+/clear
+/units,si
+!WORKIND DIRECTORY
+/cwd,E:/Lu/SHK/Solution/   
+! ---------------------------------
+! Parameter
+! ---------------------------------                        
+FILECODE 			= 'ringbuckel_30_te_loop'
+PULS_PATH			= 'E:/Lu/SHK/Puls/'
+PULS_I				= '1_puls_5_6_conntronic_therm'
+PI              	= ACOS(-1)
+!Geometry Parameters
+PROJECTION_H1       = 0.0050
+PROJECTION_H2       = 0.0013
+PROJECTION_L1       = 0.0005
+PROJECTION_R1       = 0.020/2
+PROJECTION_R2       = 0.0140/2
+PROJECTION_R3       = 0.0034
+PROJECTION_PHI_1    = 30
+PROJECTION_PHI_2    = 30
+SHEET_R             = PROJECTION_R1
+SHEET_H             = 0.0020
+T_UNI             	= 298
+arg_ecc             = 1e-4
+arg_tcc             = 1e-4
+PHYS_T_E            = 'T_E'
+T_E_FILE            = 'Thermo_Electric'
+! ---------------------------------
+! Change Working directories
+! ---------------------------------
+/inquire,act_path,directory
+/mkdir,%act_path(1,1)%/%FILECODE%
+/cwd,%act_path(1,1)%/%FILECODE%
+/filname,FILECODE,1
+! ---------------------------------------------------------------------
+! Load Input data
+! ---------------------------------------------------------------------
+/inquire,TLINES_I,lines,%PULS_PATH%%PULS_I%,csv
+*dim,TABLE_I,table,TLINES_I,1,1,time
+*tread,TABLE_I,%PULS_PATH%%PULS_I%,csv
+*dim,ARRAY_I,array,TLINES_I+1,2
+*mfun,ARRAY_I(1,1),copy,TABLE_I(0,0)
+TMAX_I = ARRAY_I(TLINES_I+1,1)
+TMIN_I = ARRAY_I(2,1)
+TINC_I = (TMAX_I-TMIN_I)/(TLINES_I-1)
+! ---------------------------------------------------------------------
+! Geometry
+! ---------------------------------------------------------------------
+! Keypoints
+! ----------------------------------
+/prep7
+k,100,0,0
+k,101,PROJECTION_R3,0
+*if,PROJECTION_PHI_1,eq,90,then
+    k,102,PROJECTION_R2-PROJECTION_L1/2,0
+*else
+    k,102,PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),0
+*endif
+*if,PROJECTION_PHI_2,eq,90,then
+    k,103,PROJECTION_R2+PROJECTION_L1/2,0
+*else
+    k,103,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),0
+*endif
+k,104,PROJECTION_R1,0
+k,105,PROJECTION_R1,-SHEET_H
+*if,PROJECTION_PHI_1,eq,90,then
+    k,106,PROJECTION_R2-PROJECTION_L1/2,-SHEET_H
+*else
+    k,106,PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),-SHEET_H
+*endif
+*if,PROJECTION_PHI_2,eq,90,then
+    k,107,PROJECTION_R2+PROJECTION_L1/2,-SHEET_H
+*else
+    k,107,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),-SHEET_H
+*endif
+k,108,PROJECTION_R3,-SHEET_H
+k,109,0,-SHEET_H
+!KEYPOINTS SHEET
+k,200,PROJECTION_R3,PROJECTION_H1
+k,201,PROJECTION_R1,PROJECTION_H1
+k,202,PROJECTION_R1,PROJECTION_H2+PROJECTION_H1*0.30
+k,203,PROJECTION_R1,PROJECTION_H2+PROJECTION_H1*0.10
+k,204,PROJECTION_R1,PROJECTION_H2
+*if,PROJECTION_PHI_2,eq,90,then
+    k,205,PROJECTION_R2+PROJECTION_L1/2,PROJECTION_H2
+*else
+    k,205,PROJECTION_R2+PROJECTION_L1/2+PROJECTION_H2/(tan(PROJECTION_PHI_2*PI/180)),PROJECTION_H2
+*endif
+k,206,PROJECTION_R2+PROJECTION_L1/2,0
+k,207,PROJECTION_R2-PROJECTION_L1/2,0
+*if,PROJECTION_PHI_1,eq,90,then
+    k,208,PROJECTION_R2-PROJECTION_L1/2,PROJECTION_H2
+*else
+    k,208,PROJECTION_R2-PROJECTION_L1/2-PROJECTION_H2/(tan(PROJECTION_PHI_1*PI/180)),PROJECTION_H2
+*endif
+k,209,PROJECTION_R3,PROJECTION_H2
+k,210,PROJECTION_R3,PROJECTION_H2+PROJECTION_H1*0.10
+k,211,PROJECTION_R3,PROJECTION_H2+PROJECTION_H1*0.30
+!AREAS
+numstr,area,100
+numstr,line,100
+a,100,101,108,109
+a,101,102,106,108
+a,102,103,107,106
+a,103,104,105,107
+aglue,100,101,102,103
+numstr,area,200
+numstr,line,200
+a,205,206,207,208
+a,203,204,209,210
+a,202,203,210,211
+a,201,202,211,200
+aglue,200,201,202,203
+! ---------------------------------------------------------------------
+! Thermal electric problem setup
+! ---------------------------------------------------------------------
+! Material
+! ----------------------------------
+/mplib,read,E:\Lu\SHK\Material                       
+mat,1,
+mpread,'ENAW5083_JMAT_EDIT','si_mpl','',LIB
+mat,2,
+mpread,'ENAW6082_JMAT_EDIT','si_mpl','',LIB
+! ----------------------------------
+! Elememt and Mat
+! ----------------------------------
+et,1,plane223
+keyopt,1,1,110
+keyopt,1,3,1
+asel,s,,,100,104,1
+aatt,1,,1
+asel,s,,,200,204,1
+aatt,2,,1
+! ----------------------------------
+! Meshing
+! ----------------------------------
+mopt,lsmo,on                  !smooth
+esize,0.0002
+allsel,all,all
+asel,s,,,102,200,98
+aesize,all,0.00006
+asel,s,,,101,103,2
+asel,a,,,204
+aesize,all,0.00008
+asel,s,,,100
+asel,a,,,202
+aesize,all,0.0001
+allsel,all,all
+amesh,all
+!Contact pair Projection ring - Lower Sheet
+!ECC
+*dim,ecc_enaw5083_enaw6082,table,15,1,,temp
+ecc_enaw5083_enaw6082(1,0)=298,333,373,433,473,533,573,673,773,873,1173,1573,2073,2773,3273
+ecc_enaw5083_enaw6082(1)=3.677E+11/arg_ecc,3.397E+11/arg_ecc,3.051E+11/arg_ecc,2.525E+11/arg_ecc,2.385E+11/arg_ecc,2.507E+11/arg_ecc,2.600E+11/arg_ecc,2.861E+11/arg_ecc,3.056E+11/arg_ecc,2.507E+11/arg_ecc
+ecc_enaw5083_enaw6082(11)= 6.205E+12/arg_ecc,1.058E+14/arg_ecc,9.286E+13/arg_ecc,8.258E+13/arg_ecc,7.793E+13/arg_ecc
+!TCC
+*dim,tcc_enaw5083_enaw6082,table,15,1,1,temp
+tcc_enaw5083_enaw6082(1,0)=298,333,373,433,473,533,573,673,773,873,1173,1573,2073,2773,3273
+tcc_enaw5083_enaw6082(1)=2.652E+06/arg_tcc,2.738E+06/arg_tcc,2.754E+06/arg_tcc,2.646E+06/arg_tcc,2.729E+06/arg_tcc,3.234E+06/arg_tcc,3.606E+06/arg_tcc,4.660E+06/arg_tcc,5.717E+06/arg_tcc,5.297E+06/arg_tcc
+tcc_enaw5083_enaw6082(11)=1.762E+08/arg_tcc,4.028E+09/arg_tcc,4.659E+09/arg_tcc,5.542E+09/arg_tcc,6.172E+09/arg_tcc
+mat,1
+r,3
+real,3
+et,2,169
+et,3,172
+r,3,,1.0,0.1,0,
+rmore,,,1.0E20,0.0,1.0,
+rmore,0.0,%tcc_enaw5083_enaw6082%,1.0,,1.0,0.5
+rmore,%ecc_enaw5083_enaw6082%,1.0,1.0,0.0,,1.0
+keyopt,3,1,4                                            !selects degrees of freedom
+keyopt,3,2,0                                            !contact algorithm (augmented Lagrangian)
+keyopt,3,3,0                                            !units of normal contact stiffness
+keyopt,3,4,0                                            !location of contact detection point (on gauss point)
+keyopt,3,5,0                                            !automated adjustment
+keyopt,3,6,2                                            !contact stiffness
+keyopt,3,7,0                                            !element level time incrementation control
+keyopt,3,8,0                                            !asymmetric contact selection
+keyopt,3,9,0                                            !effect of initial penetration or gap
+keyopt,3,10,1                                           !contact stiffness update
+keyopt,3,11,0                                           !beam/shell thickness effect
+keyopt,3,12,5            
+! GENERATE THE TARGET SURFACE
+lsel,s,,,107
+type,2
+nsll,s,1
+esln,s,0
+esurf
+! GENERATE THE CONTACT SURFACE
+lsel,s,,,200,202,1
+type,3
+nsll,s,1
+esln,s,0
+esurf
+allsel,all,all
+! ----------------------------------
+! Boundary conditions
+! ----------------------------------
+allsel,all,all
+nsel,s,loc,y,PROJECTION_H1         
+cp,1,volt,all
+*get,n1,node,,num,min
+f,n1,amps,0
+flist                                            
+lsel,s,,,106,112,3
+lsel,a,,,102
+dl,all,,volt,0                                          
+allsel,all,all
+tunif,T_UNI     
+! ----------------------------------
+! solve options setup
+! ----------------------------------
+/solu
+nlhist,nsol,TEMP_MAX_THERM,temp,max
+antype,0                                                !perform a transient analysis
+! trnopt,full,,,,,hht                                     !specifies transient analysis options
+timint,on                                               !turns on transient effects
+nropt,unsym                                             !use full newton-raphson with unsymmetric matrice
+lnsrch,on
+outres,all,all                                          !controls the solution data written to the database
+kbc,0  
+autots,off
+deltim,TINC_I,TINC_I*0.1,TINC_I*10
+allsel,all,all
+! nsubst,143,50000,100,off
+outres,all,all
+allsel,all,all
+parsav,all,PRMTR_DT,sav 
+! physics,write,PHYS_T_E,%PHYS_T_E%
+! physics,clear
+save
+finish
+! ---------------------------------------------------------------------
+! Solution of thermal electric problem
+! ---------------------------------------------------------------------
+! ----------------------------------
+! Stepwise solving
+! ----------------------------------
+/filname,T_E_FILE,1
+/assign,esav,THERM,esav       ! redirect files for use in thermal restart
+/assign,emat,THERM,emat
+/prep7
+! physics,read,PHYS_T_E
+! parres,new,PRMTR_DT,sav
+allsel
+
+*do,i,1,250,1
+    
+    TIME = i*TINC_I
+    parsav,all,PRMTR_DT,sav  
+    *if,i,eq,1,then
+        /solu
+        f,n1,amps,%TABLE_I(TIME)%
+    *else
+        /solu
+        antype,0,rest,i-1,,CONTINUE
+        parres,new,PRMTR_DT,sav
+        /solu
+        f,n1,amps,%TABLE_I(TIME)%
+    *endif
+    
+    time,TIME
+    outres,all,all
+    allsel,all
+    solve
+    save,T_E_FILE,,,all
+    ! rescontrol,file_summary
+    finish
+    /assign,esav
+    /assign,emat
+    finish
+
+*enddo
