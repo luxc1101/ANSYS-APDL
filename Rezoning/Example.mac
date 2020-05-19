@@ -1,0 +1,607 @@
+finish
+/clear
+/units,si
+/cwd,C:/SHK/Solution/
+filecode = 'rezoning_example'
+/inquire,act_path,directory
+/mkdir,%act_path(1,1)%/%filecode%
+/cwd,%act_path(1,1)%/%filecode%
+/filname,filecode,1
+
+/batch,list
+/filname,RznExample1
+
+/prep7
+
+! /com define parameters
+h=20
+b=10
+el=b/8
+xc=17.5
+yc=32.99038
+rc=15
+PilotMove= -13
+
+c10=62.3584129
+c01=-37.8485452
+dd=1e-4
+
+! /com define element types, material, etc.
+et,1,182
+keyopt,1,3,2
+keyopt,1,6,1
+
+et,2,169
+et,3,172
+keyopt,3,9,0
+keyopt,3,10,1
+
+et,4,169
+et,5,172
+keyopt,5,9,0
+keyopt,5,10,1
+
+tb,hyper,1,,2,mooney
+tbdata,1,c10,c01,dd
+
+mp,mu,2,0.0
+
+r,3
+r,4
+
+! /com define geometry
+k,1,xc,yc
+k,2,xc,yc,yc
+k,3,xc-rc,yc 
+k,4,0.0,0.0
+k,5,2*rc,0.0
+rect,0,b,0,h
+circle,1,rc,2,3,360,1
+/pnum,line,1
+lplot
+l,4,5
+lplot
+aplot   
+
+! /com create solid elements
+esize,el 
+mat,1
+type,1
+real,1
+amesh,1 
+
+! /com generate the 1st contact pair
+mat,2
+real,3
+type,2
+
+esize,h
+lmesh,5,7
+*get,PilotID,node,,num,max
+PilotID=PilotID+1
+nkpt,PilotID,1
+tshap, pilo
+e,PilotID
+
+type,3
+lsel,,,,2,3
+nsll,,1
+esln,,0
+esurf
+alls
+
+! /com generate the 2nd contact pair
+real,4
+type,4
+
+lmesh,8
+lsel,,,,8
+esll
+esurf,,reverse
+alls
+
+type,5
+lsel,,,,1,2
+nsll,,1
+esln,,0
+esurf
+alls
+
+! /com apply boundary conditions and loads
+d,PilotID,ux,0.0
+d,PilotID,uy,PilotMove
+d,PilotID,rotz,0.0
+
+lsel,,,,4
+nsll,,1
+d,all,ux,0.0
+alls
+
+lsel,,,,8
+nsll,,1
+d,all,uy,0.0
+alls
+
+nlist
+elist
+dlist
+
+! /com check the contact definition
+cncheck
+finish
+
+/solution
+rescontrol,,all,1
+pred,off
+nlgeom,on
+time,1
+NSUBST,10,100,5
+outres,all,all
+solve
+finish
+! nicht konvergiert bei 1s
+
+/post1
+set,1,16
+prns,u,comp
+prns,s,comp
+prns, cont
+finish
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+! Rezoning Input for the Analysis
+
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+/batch,list
+! Clear the database
+/clear,nostart
+/filname,RznExample1
+! Solution processor
+/solution
+! Initiates the rezoning process
+rezone,manual,1,18  ! specify the substep to rezone
+
+remesh,start       ! start remeshing operation
+esel,,,,65,128     ! select region to remesh
+aremesh            ! create area for new mesh
+lesize,10,,,8   
+lesize,31,,,10  
+lesize,18,,,6 
+amesh,2            ! create the new mesh
+esel,all
+nsel,all
+remesh,fini        ! finish remeshing operation
+
+elist              ! check the new model, BC and loads  
+dlist
+! Maps solved node and element solutions from an original mesh to a new mesh.
+mapsolve,18        ! map solutions
+
+finish
+
+/solution          ! restart
+antype,,restart
+solve
+finish
+
+
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+! Mesh Nonlinear Adaptivity Examples： Rubber Seal Simulation
+
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+finish
+/clear
+! /cwd,C:/SHK/Solution/
+! filecode = 'Mesh_Nonlinear_Adaptivity'
+! /inquire,act_path,directory
+! /mkdir,%act_path(1,1)%/%filecode%
+! /cwd,%act_path(1,1)%/%filecode%
+! /filname,filecode,1
+
+/prep7
+/com geometry paratmeters
+rf = 1
+yd = 6
+yf = 12
+xc = 0
+yc = 12
+disp = -4.0
+w = 3
+
+/com element types and size
+el = w
+et,1,182
+keyopt,1,3,2
+!keyopt,1,6,1
+
+et,2,169
+et,3,171
+keyopt,3,9,0
+keyopt,3,10,1
+!keyopt,3,2,3
+
+/com materials
+c10=62.3584129
+c01=-37.8485452
+dd=1.E-03
+
+tb,hyper,1,,2,mooney
+tbdata,1,c10,c01,dd
+
+mp,mu,2,0.0
+
+r,2
+
+/com create the model
+k,1,xc,yc
+k,2,xc+3*w,yc
+k,3,w,0.0
+k,4,w,yd
+k,5,3*w,yd
+rect,0,w,0,yd
+rect,0,w,yd,yf
+/pnum,line,1
+l,1,2
+l,3,4
+l,4,5
+lfillt,10,11,rf
+
+
+/com create mesh
+esize,el
+mat,1
+type,1
+real,1
+amesh,1,2
+/pnum,elem,1
+/pnum,node,1
+nummrg,node
+numcmp,node
+/replot
+
+/com the 1st contact paires
+mat,2
+real,2
+type,2
+
+esize,yf
+lmesh,9
+allsel,all
+
+type,3  
+lsel,,,,6,7 
+nsll,,1 
+esln,,0 
+esurf   
+alls
+
+/com the 2nd contact paires
+real,3
+type,2
+
+lplot
+esize,yf
+lmesh,9,12
+lsel,s,line, ,10,12
+esll,s,1
+esurf, ,reverse
+allsel,all
+
+lplot
+type,3  
+lsel,,,,6
+lsel,a,,,2
+nsll,,1 
+esln,,0 
+esurf   
+alls
+
+/com boundary condition
+
+/com rigid punch
+lsel,,,,9
+nsll,,1
+d,all,uy,disp
+d,all,ux,0.0
+alls
+
+/com rigid die face
+lsel,,,,10,12
+nsll,,1
+d,all,uy,0.0
+d,all,ux,0.0
+alls
+
+/com left side
+nsel,,loc,x,0
+d,all,ux,0.0
+alls
+
+/com bottom
+nsel,,loc,y,0
+d,all,uy,0.0
+alls
+
+/com check the contact definition
+cncheck
+elist
+fini
+
+/solution
+
+/com define nonlinear adaptive criterion
+esel,,ename,,182
+cm,solid,elem
+allsel
+nlad,solid,add,box,xyzr,-0.0,9,5,12
+nlad,solid,on,,,-2
+NLADAPTIVE,Component,Action,Criterion,Option,VAL1,VAL2,VAL3
+
+pred,off
+rescontrol,,all,1,20
+eresx,no
+nlgeom,on
+time,1
+NSUBST,50,500,5
+outres,all,all
+solve
+fini
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+! Mesh Nonlinear Adaptivity Examples：  Crack Simulation
+
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+finish
+/clear
+/cwd,C:/SHK/Solution/
+filecode = 'Crack Simulation'
+/inquire,act_path,directory
+/mkdir,%act_path(1,1)%/%filecode%
+/cwd,%act_path(1,1)%/%filecode%
+/filname,filecode,1
+
+/prep7
+! MATERIAL PROPERTIES 
+et,1,183
+keyopt,1,1,0
+keyopt,1,6,1
+MP,PRXY,1,0.3,
+MPTEMP,1,0,500            ! Define temperatures for Young's modulus
+MP,EX,1,12E6,-8E3         ! C0 and C1 terms for Young's modulus
+TB,BKIN,1,2               ! Activate a data table
+TBTEMP,0.0                ! Temperature = 0.0
+TBDATA,1,44E3,1.2E6       ! Yield = 44,000; Tangent modulus = 1.2E6
+TBTEMP,500                ! Temperature = 500
+TBDATA,1,29.33E3,0.8E6    ! Yield = 29,330; Tangent modulus = 0.8E6
+TBLIST,BKIN,1             ! List the data table
+/XRANGE,0,0.01            ! X-axis of TBPLOT to extend from varepsilon=0 to 0.01
+TBPLOT,BKIN,1             ! Display the data table
+
+/prep7
+! MATERIAL PROPERTIES 
+et,1,183
+keyopt,1,1,0
+keyopt,1,6,1
+MP,PRXY,1,0.3 
+MPTEMP,1,0,500            ! Define temperatures for Young's modulus
+MP,EX,1,12E6,-8E3         ! C0 and C1 terms for Young's modulus
+TB,BKIN,1,2               ! Activate a data table
+TBTEMP,0.0                ! Temperature = 0.0
+TBDATA,1,44E3,1.2E6       ! Yield = 44,000; Tangent modulus = 1.2E6
+TBTEMP,500                ! Temperature = 500
+TBDATA,1,29.33E3,0.8E6    ! Yield = 29,330; Tangent modulus = 0.8E6
+TBLIST,BKIN,1             ! List the data table
+/XRANGE,0,0.01            ! X-axis of TBPLOT to extend from varepsilon=0 to 0.01
+TBPLOT,BKIN,1             ! Display the data table
+
+! GEOMETRY 
+blc4,0,0,10,0.5        
+blc4,0,0,10,-0.5
+lsel,s,loc,y,0
+lsel,a,loc,y,0.5
+lsel,a,loc,y,-0.5
+lesize,all,,,20
+lsel,inve
+lesize,all,,,5
+
+amesh,all
+elist
+allsel,all
+
+nsel,s,loc,y,0
+nsel,r,loc,x,0,7
+nummrg,node
+allsel,all
+! COMPONENT
+esel,all
+cm,cm1,elem
+allsel,all
+
+esel,all
+cm,cm2,elem
+allsel,all
+
+! LOADS
+nsel,s,loc,x,0
+d,all,all
+allsel,all
+
+nsel,s,loc,y,0.5
+nsel,r,loc,x,10
+f,all,fy,5500
+allsel,all
+
+nsel,s,loc,y,-0.5
+nsel,r,loc,x,10
+f,all,fy,-5500
+allsel,all
+
+nplot
+finish
+/solu
+nlgeom,on                       ! large displacement analysis ON
+outres,all,all                  ! all solutions are written
+rescontrol,define,all,all       ! write every substeps in a file
+eresx,no                        ! no interpolation for the point of integration
+time,1
+nsubst,50,100,20
+/nerr,,,,1                      ! prevent the GUI for closing if no convergence
+
+! NON LINEAR ADAPTIVITY 
+
+nlad,cm2,add,energy,mean,1
+nlad,cm2,on,,,-3
+allsel,all
+solve 
+finish
+
+! POSTPROCESSING 
+/post1
+/out
+
+set,last
+nsel,s,loc,y,0
+nsel,r,loc,x,0,7
+esln,s,0,all
+presol,s,eqv
+
+fini
+/exit
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+! Mesh Nonlinear Adaptivity Examples：  Metal Forging Simulation
+
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+finish
+/clear
+/cwd,C:/SHK/Solution/
+filecode = 'Metal Forging'
+/inquire,act_path,directory
+/mkdir,%act_path(1,1)%/%filecode%
+/cwd,%act_path(1,1)%/%filecode%
+/filname,filecode,1
+/config,nproc,1
+/PREP7
+!-----------geometry parameters---------------	!mm
+cylinder_radius		=	500	
+cylinder_offset		=	1000	
+block_height		=	1000	
+radius_fillet		= 	33
+!---------inital meshing parameters------------
+block_esize			=	200			
+cylinder_esize		=	200			
+!------------loading parameters----------------
+cylinder_disp		=	-800		
+!------------NLAD parameters------------------
+skw_			=	0.9						!skewness threshold
+freq			=	1							!NLAD frequency (1 means check every substep)
+start_time		=	0						!beginning time for NLAD interval
+end_time		=	1							!end time for NLAD interval
+!------------remeshing parameters---------------
+sculpt_layers	=	2						!number of sculpting layers
+conc_			=	10							!concave patch splitting angle															
+conv_			=	10							!convex patch splitting angle
+edge_			=	10							!edge splitting angle
+
+!******************material properties*****************
+MP,EX,1,70e3								!aluminium material properties															
+MP,NUXY,1,0.33							!poisson's ratio
+MP,MU,1,0									!coefficient of friction															
+TB,BISO,1,1									!bilinear isotropic material
+TBDATA,1,20									!yield stress in MPa
+TBDATA,2,7e3								!tangent modulus in MPa
+
+!------------geometry creation-------------------
+blc4,0,0,block_height,block_height,block_height
+k,9,0,cylinder_offset,0
+k,10,0,cylinder_offset,cylinder_radius
+k,11,0,cylinder_offset+cylinder_offset,cylinder_radius
+k,12,0,cylinder_offset+cylinder_offset,0
+l,9,10 
+l,10,11
+l,11,12
+l,12,9                       
+lfillt,13,14,radius_fillet
+al,13,17,14,15,16
+vrotat,7,,,,,,9,12,90
+
+!---------element types & settings-----------
+et,1,285 
+et,2,170
+et,3,173
+!-------------general meshing----------------
+type,1
+mat,1          
+real,1           
+esize,block_esize
+vmesh,1
+!-------------contact pair 1----------------
+real,2                     
+!---------------target elements--------------
+type,2
+mat,2                      	
+asel,s,area,,8,10
+aesize,all,cylinder_esize
+amesh,all
+alls
+!---------------contact elements-----------
+type,3
+mat,1                  
+asel,s,area,,4
+nsla,s,1
+esln
+esurf
+alls
+!--------------create components-----------
+esel,s,ename,,285
+cm,comp1,elem				!make whole block as NLAD component
+alls
+!-----boundary conditions & loading-------	
+asel,s,area,,5,6
+nsla,s,1
+d,all,ux,0.0
+alls
+asel,s,area,,1,2
+nsla,s,1
+d,all,uz,0.0
+alls
+asel,s,area,,3	
+nsla,s,1
+d,all,uy,0.0
+alls
+asel,s,area,,7,12
+nsla,s,1
+d,all,uz,0.0
+d,all,ux,0.0
+d,all,uy,cylinder_disp
+alls
+finish
+
+/SOLU         															
+!--------------general solution settings--------
+nlgeom,on
+eresx,no
+outres,all,all
+!---------------NLAD settings-------------------
+!check NLAD parameters section above for values
+nlad,comp1,add,mesh,skew,skw_       			!nlad with mesh distortion criterion
+nlad,comp1,on,,,freq,start_time,end_time        
+!------------remeshing settings---------------
+!check remeshing parameters section above for values
+nlad,comp1,nlay,sculpt_layers
+nlad,comp1,nang,conc_,conv_ 
+nlad,comp1,aedg,edge_
+!---------------step settings-------------------
+time,1  
+nsubst,100,10000,10
+
+alls
+solve
+finish
+
+!---------------POSTPROCESSING-------------------------
+/POST1
+set,list
+finish
+/exit
